@@ -1,4 +1,9 @@
 # Load the libraries
+import tensorflow as tf
+print(tf.__version__) #verifies tensorflow version
+print(tf.config.list_physical_devices('GPU')) #checks for gpu
+
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -9,13 +14,19 @@ import random
 import time
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
-import keras
+
+
+#import keras
 from keras import Sequential
-from keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
-from keras.utils import to_categorical
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import gc
 from IPython.display import Markdown, display
+
+from time import perf_counter
+#import kagglehub
+
 def printmd(string):
     # Print with Markdowns    
     display(Markdown(string))
@@ -42,13 +53,13 @@ def load_images_from_folder(folder,only_path = False, label = ""):
 
 # Load the paths on the images
 images = []
-dirp = "/kaggle/input/fruit-recognition/"
-for f in os.listdir(dirp):
-    if "png" in os.listdir(dirp+f)[0]:
-        images += load_images_from_folder(dirp+f,True,label = f)
+directory = r"C:\Users\nsant\OneDrive\Documents\Uni\Y3\Project_MMME3083\Code\Fruit Image DB"
+for f in os.listdir(directory):
+    if "png" in os.listdir(directory+'\\'+f)[0]:
+        images += load_images_from_folder(directory+'\\'+f,True,label = f)
     else: 
-        for d in os.listdir(dirp+f):
-            images += load_images_from_folder(dirp+f+"/"+d,True,label = f)
+        for d in os.listdir(directory+'\\'+f):
+            images += load_images_from_folder(directory+"\\"+f+"\\"+d,True,label = f)
             
 # Create a dataframe with the paths and the label for each fruit
 df = pd.DataFrame(images, columns = ["fruit", "path"])
@@ -62,31 +73,35 @@ df = df.reset_index(drop=True)
 fruit_names = sorted(df.fruit.unique())
 mapper_fruit_names = dict(zip(fruit_names, [t for t in range(len(fruit_names))]))
 df["label"] = df["fruit"].map(mapper_fruit_names)
-print(mapper_fruit_names)
+#print(mapper_fruit_names)
 
 # Visualize the resulting dataframe
 df.head()
 
 # Display the number of pictures of each category
+"""
 vc = df["fruit"].value_counts()
 plt.figure(figsize=(10,5))
 sns.barplot(x = vc.index, y = vc, palette = "rocket")
 plt.title("Number of pictures of each category", fontsize = 15)
 plt.xticks(rotation=90)
 plt.show()
+"""
 
 # Display some pictures of the dataset
-fig, axes = plt.subplots(nrows=4, ncols=5, figsize=(15, 15),
-                        subplot_kw={'xticks': [], 'yticks': []})
-
+fig, axes = plt.subplots(nrows=4, ncols=5, figsize=(15, 15),subplot_kw={'xticks': [], 'yticks': []})
+"""
 for i, ax in enumerate(axes.flat):
     ax.imshow(plt.imread(df.path[i]))
     ax.set_title(df.fruit[i], fontsize = 12)
 plt.tight_layout(pad=0.0)
 plt.show()
+"""
 
+print("94")
 #!  Train the neural network from scratch with Keras and w/o generator
 # The pictures will be resized to have the same size for the neural network
+"""
 img = plt.imread(df.path[0])
 plt.imshow(img)
 plt.title("Original image")
@@ -95,7 +110,8 @@ plt.show()
 plt.imshow(cv2.resize(img, (150,150)))
 plt.title("After resizing")
 plt.show()
-
+"""
+print("106 - about to train CNN model")
 
 #! Create and train CNN model
 def cut_df(df, number_of_parts, part):
@@ -136,7 +152,6 @@ def load_img(df):
 
 def create_model():
     shape_img = (150,150,3)
-    
     model = Sequential()
 
     model.add(Conv2D(filters=32, kernel_size=(3,3),input_shape=shape_img, activation='relu', padding = 'same'))
@@ -169,7 +184,7 @@ def create_model():
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
     
     return model
-
+print("179")
 def from_categorical(lst):
     """
     Inverse of to_categorical
@@ -192,7 +207,7 @@ def display_stats(y_test, pred):
     print(confusion_matrix(y_test_class, pred))
     print("\n")
     printmd(f"# Accuracy: {round(accuracy_score(y_test_class, pred),5)}")
-    
+
 def plot_training(model):
     history = pd.DataFrame(model.history.history)
     history[["accuracy","val_accuracy"]].plot()
@@ -216,9 +231,9 @@ y_train = to_categorical(y_train)
 
 # If the ANN doesn't increase its prediction accuracy on the validation data after 
 # 10 epochs, stop the training and take the best of the ANN.
-callbacks = [EarlyStopping(monitor='val_loss', patience=20),ModelCheckpoint(filepath='best_model.h5', monitor='val_loss', save_best_only=True)]
+callbacks = [EarlyStopping(monitor='val_loss', patience=20),ModelCheckpoint(filepath='best_model.keras', monitor='val_loss', save_best_only=True)]
 
-model.fit(X_train, y_train, batch_size=128, epochs=100, callbacks=callbacks, validation_split = 0.1, verbose = 1)
+model.fit(X_train, y_train, batch_size=16, epochs=25, callbacks=callbacks, validation_split = 0.1, verbose = 1) # batch size changed from 128 to 16 // epochs changes from 100 to 25
 hists.append(model.history.history)
 
 # Run the garbage collector
@@ -239,24 +254,20 @@ plt.title("Accuracy vs Validation Accuracy")
 plt.show()
 
 
-
-
-
 #!PREDICTIONS############################################################
 import warnings
 warnings.filterwarnings("ignore")
 
 # Make predictions with the model using the last 1/20 part of the dataset
 X, y = load_img(cut_df(df, 20, 20))
-pred = model.predict_classes(X)
-y_test = to_categorical(y)
+pred = model.predict(X) #previously predict_classes
+y_test = to_categorical(y) ######################################################################################################
 
 # Display statistics
 display_stats(y_test, pred)
 
 #Visualise the result of prediction with pictures
-fig, axes = plt.subplots(nrows=4, ncols=4, figsize=(10, 10),
-                        subplot_kw={'xticks': [], 'yticks': []})
+fig, axes = plt.subplots(nrows=4, ncols=4, figsize=(10, 10),subplot_kw={'xticks': [], 'yticks': []})
 for i, ax in enumerate(axes.flat):
     ax.imshow(X[-i])
     ax.set_title(f"True label: {fruit_names[y[-i]]}\nPredicted label: {fruit_names[pred[-i]]}")
