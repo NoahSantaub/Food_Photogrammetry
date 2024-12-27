@@ -16,11 +16,13 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.model_selection import train_test_split
 
 
-#import keras
-from keras import Sequential
-from tensorflow.keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import keras
+print(keras.__version__)
+print(tf.keras.__version__)#version check
+from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
+from tensorflow.python.keras.utils.np_utils import to_categorical
+from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint
 import gc
 from IPython.display import Markdown, display
 
@@ -73,35 +75,35 @@ df = df.reset_index(drop=True)
 fruit_names = sorted(df.fruit.unique())
 mapper_fruit_names = dict(zip(fruit_names, [t for t in range(len(fruit_names))]))
 df["label"] = df["fruit"].map(mapper_fruit_names)
-#print(mapper_fruit_names)
+print(mapper_fruit_names)
 
 # Visualize the resulting dataframe
 df.head()
 
 # Display the number of pictures of each category
-"""
+
 vc = df["fruit"].value_counts()
 plt.figure(figsize=(10,5))
 sns.barplot(x = vc.index, y = vc, palette = "rocket")
 plt.title("Number of pictures of each category", fontsize = 15)
 plt.xticks(rotation=90)
 plt.show()
-"""
+
 
 # Display some pictures of the dataset
 fig, axes = plt.subplots(nrows=4, ncols=5, figsize=(15, 15),subplot_kw={'xticks': [], 'yticks': []})
-"""
+
 for i, ax in enumerate(axes.flat):
     ax.imshow(plt.imread(df.path[i]))
     ax.set_title(df.fruit[i], fontsize = 12)
 plt.tight_layout(pad=0.0)
 plt.show()
-"""
+
 
 print("94")
 #!  Train the neural network from scratch with Keras and w/o generator
 # The pictures will be resized to have the same size for the neural network
-"""
+
 img = plt.imread(df.path[0])
 plt.imshow(img)
 plt.title("Original image")
@@ -110,7 +112,7 @@ plt.show()
 plt.imshow(cv2.resize(img, (150,150)))
 plt.title("After resizing")
 plt.show()
-"""
+
 print("106 - about to train CNN model")
 
 #! Create and train CNN model
@@ -197,16 +199,16 @@ def from_categorical(lst):
         lst2.append(x.index(max(x)))
     return lst2
 
-def display_stats(y_test, pred):
+def display_stats(y_test, predict):
 # Display prediction statistics
     print(f"### Result of the predictions using {len(y_test)} test data ###\n")
     y_test_class = from_categorical(y_test)
     print("Classification Report:\n")
-    print(classification_report(y_test_class, pred))
+    print(classification_report(y_test_class, predict))
     print("\nConfusion Matrix:\n\n")
-    print(confusion_matrix(y_test_class, pred))
+    print(confusion_matrix(y_test_class, predict))
     print("\n")
-    printmd(f"# Accuracy: {round(accuracy_score(y_test_class, pred),5)}")
+    printmd(f"# Accuracy: {round(accuracy_score(y_test_class, predict),5)}")
 
 def plot_training(model):
     history = pd.DataFrame(model.history.history)
@@ -233,7 +235,7 @@ y_train = to_categorical(y_train)
 # 10 epochs, stop the training and take the best of the ANN.
 callbacks = [EarlyStopping(monitor='val_loss', patience=20),ModelCheckpoint(filepath='best_model.keras', monitor='val_loss', save_best_only=True)]
 
-model.fit(X_train, y_train, batch_size=16, epochs=25, callbacks=callbacks, validation_split = 0.1, verbose = 1) # batch size changed from 128 to 16 // epochs changes from 100 to 25
+model.fit(X_train, y_train, batch_size=16, epochs=4, callbacks=callbacks, validation_split = 0.1, verbose = 1) # batch size changed from 128 to 16 // epochs changes from 100 to 25
 hists.append(model.history.history)
 
 # Run the garbage collector
@@ -260,23 +262,25 @@ warnings.filterwarnings("ignore")
 
 # Make predictions with the model using the last 1/20 part of the dataset
 X, y = load_img(cut_df(df, 20, 20))
-pred = model.predict(X) #previously predict_classes
+predict = model.predict_classes(X)#.round() #*included .round() to prevent calassification metrics cannot handel mix of targets #previously predict_classes
 y_test = to_categorical(y) ######################################################################################################
 
 # Display statistics
-display_stats(y_test, pred)
+display_stats(y_test, predict)
 
 #Visualise the result of prediction with pictures
 fig, axes = plt.subplots(nrows=4, ncols=4, figsize=(10, 10),subplot_kw={'xticks': [], 'yticks': []})
 for i, ax in enumerate(axes.flat):
     ax.imshow(X[-i])
-    ax.set_title(f"True label: {fruit_names[y[-i]]}\nPredicted label: {fruit_names[pred[-i]]}")
+    ax.set_title(f"True label: {fruit_names[y[-i]]}\nPredicted label: {fruit_names[predict[-i]]}")
 plt.tight_layout()
 plt.show()
+print("276\n")
 
 #!Competition of 27 pre-trained architectures - May the best win
 # Use only 5% on the pictures to speed up the training
 train_df,test_df = train_test_split(df[['path','fruit']].sample(frac=0.05,random_state=0), test_size=0.2,random_state=0)
+print("281\n")
 def create_gen():
     # Load the Images with a generator and Data Augmentation
     train_generator = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -299,13 +303,13 @@ def create_gen():
         shuffle=True,
         seed=0,
         subset='training',
-#         rotation_range=30, # Uncomment those lines to use data augmentation
-#         zoom_range=0.15,
-#         width_shift_range=0.2,
-#         height_shift_range=0.2,
-#         shear_range=0.15,
-#         horizontal_flip=True,
-#         fill_mode="nearest"
+    #   rotation_range=30, # Uncomment those lines to use data augmentation
+    #   zoom_range=0.15,
+    #   width_shift_range=0.2,
+    #   height_shift_range=0.2,
+    #   shear_range=0.15,
+    #   horizontal_flip=True,
+    #   fill_mode="nearest"
     )
 
     val_images = train_generator.flow_from_dataframe(
@@ -319,13 +323,13 @@ def create_gen():
         shuffle=True,
         seed=0,
         subset='validation',
-#         rotation_range=30, # Uncomment those lines to use data augmentation
-#         zoom_range=0.15,
-#         width_shift_range=0.2,
-#         height_shift_range=0.2,
-#         shear_range=0.15,
-#         horizontal_flip=True,
-#         fill_mode="nearest"
+    #   rotation_range=30, # Uncomment those lines to use data augmentation
+    #   zoom_range=0.15,
+    #   width_shift_range=0.2,
+    #   height_shift_range=0.2,
+    #   shear_range=0.15,
+    #   horizontal_flip=True,
+    #   fill_mode="nearest"
     )
 
     test_images = test_generator.flow_from_dataframe(
@@ -377,13 +381,13 @@ models = {
     "EfficientNetB5": {"model":tf.keras.applications.EfficientNetB4, "perf":0},
     "EfficientNetB6": {"model":tf.keras.applications.EfficientNetB4, "perf":0},
     "EfficientNetB7": {"model":tf.keras.applications.EfficientNetB4, "perf":0},
-    "InceptionResNetV2": {"model":tf.keras.applications.InceptionResNetV2, "perf":0},
+    #"InceptionResNetV2": {"model":tf.keras.applications.InceptionResNetV2, "perf":0},#inocrrect link / wrong model unable to be called
     "InceptionV3": {"model":tf.keras.applications.InceptionV3, "perf":0},
     "MobileNet": {"model":tf.keras.applications.MobileNet, "perf":0},
     "MobileNetV2": {"model":tf.keras.applications.MobileNetV2, "perf":0},
     "MobileNetV3Large": {"model":tf.keras.applications.MobileNetV3Large, "perf":0},
     "MobileNetV3Small": {"model":tf.keras.applications.MobileNetV3Small, "perf":0},
-#     "NASNetLarge": {"model":tf.keras.applications.NASNetLarge, "perf":0}, Deleted because the input shape has to be another one
+    #"NASNetLarge": {"model":tf.keras.applications.NASNetLarge, "perf":0}, Deleted because the input shape has to be another one
     "NASNetMobile": {"model":tf.keras.applications.NASNetMobile, "perf":0},
     "ResNet101": {"model":tf.keras.applications.ResNet101, "perf":0},
     "ResNet101V2": {"model":tf.keras.applications.ResNet101V2, "perf":0},
@@ -398,7 +402,7 @@ models = {
 
 # Create the generators
 train_generator,test_generator,train_images,val_images,test_images=create_gen()
-print('\n')
+print('401 \n')
 
 # Fit the models
 for name, model in models.items():
@@ -425,16 +429,16 @@ for name, model in models.items():
 for name, model in models.items():
     
     # Predict the label of the test_images
-    pred = models[name]['model'].predict(test_images)
-    pred = np.argmax(pred,axis=1)
+    predict = models[name]['model'].predict(test_images)
+    predict = np.argmax(predict,axis=1)
 
     # Map the label
     labels = (train_images.class_indices)
     labels = dict((v,k) for k,v in labels.items())
-    pred = [labels[k] for k in pred]
+    predict = [labels[k] for k in predict]
 
     y_test = list(test_df.fruit)
-    acc = accuracy_score(y_test,pred)
+    acc = accuracy_score(y_test,predict)
     models[name]['acc'] = round(acc,4)
 #     printmd(f'**{name} has a {acc * 100:.2f}% accuracy on the test set**')
 
@@ -472,15 +476,7 @@ train_generator,test_generator,train_images,val_images,test_images=create_gen()
 
 # Create and train the model
 model = get_model(tf.keras.applications.DenseNet201)
-history = model.fit(train_images,
-                    validation_data=val_images,
-                    epochs=5,
-                    callbacks=[
-                        tf.keras.callbacks.EarlyStopping(
-                            monitor='val_loss',
-                            patience=1,
-                            restore_best_weights=True)]
-                    )
+history = model.fit(train_images, validation_data=val_images, epochs=5, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)])
 
 pd.DataFrame(history.history)[['accuracy','val_accuracy']].plot()
 plt.title("Accuracy")
@@ -491,22 +487,22 @@ plt.title("Loss")
 plt.show()
 
 # Predict the label of the test_images
-pred = model.predict(test_images)
-pred = np.argmax(pred,axis=1)
+predict = model.predict(test_images)
+predict = np.argmax(predict,axis=1)
 
 # Map the label
 labels = (train_images.class_indices)
 labels = dict((v,k) for k,v in labels.items())
-pred = [labels[k] for k in pred]
+predict = [labels[k] for k in predict]
 
 # Get the accuracy on the test set
 y_test = list(test_df.fruit)
-acc = accuracy_score(y_test,pred)
+acc = accuracy_score(y_test,predict)
 printmd(f'# Accuracy on the test set: {acc * 100:.2f}%')
 
 # Display a confusion matrix
 from sklearn.metrics import confusion_matrix
-cf_matrix = confusion_matrix(y_test, pred, normalize='true')
+cf_matrix = confusion_matrix(y_test, predict, normalize='true')
 plt.figure(figsize = (10,7))
 sns.heatmap(cf_matrix, annot=False, xticklabels = sorted(set(y_test)), yticklabels = sorted(set(y_test)),cbar=False)
 plt.title('Normalized Confusion Matrix', fontsize = 23)
@@ -519,6 +515,6 @@ fig, axes = plt.subplots(nrows=4, ncols=6, figsize=(20, 12),subplot_kw={'xticks'
 
 for i, ax in enumerate(axes.flat):
     ax.imshow(plt.imread(test_df.path.iloc[i]))
-    ax.set_title(f"True: {test_df.fruit.iloc[i].split('_')[0]}\nPredicted: {pred[i].split('_')[0]}", fontsize = 15)
+    ax.set_title(f"True: {test_df.fruit.iloc[i].split('_')[0]}\nPredicted: {predict[i].split('_')[0]}", fontsize = 15)
 plt.tight_layout()
 plt.show()
